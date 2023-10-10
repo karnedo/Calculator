@@ -1,7 +1,9 @@
 package com.example.calculator
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -39,6 +41,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import java.math.BigDecimal
+import java.util.LinkedList
+import java.util.Queue
 import java.util.Stack
 
 class MainActivity : ComponentActivity() {
@@ -69,6 +74,12 @@ fun mainScreen(){
             mutableStateOf("0")
         }
 
+        var lastExpression by rememberSaveable {
+            mutableStateOf("")
+        }
+
+        //val terms = mutableListOf<String>()
+
         //Resultado operaciones
         Box(
             modifier = Modifier
@@ -77,12 +88,25 @@ fun mainScreen(){
                 .background(Color.Gray)
         ){
             Column(Modifier.fillMaxSize()){
-                Row(Modifier.fillMaxWidth().weight(1f)){
-                    //poner aquí el resultado de la operación anterior
-                    Expression(expression)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)){
+                    Expression(40, lastExpression) //Resultado de la última operación
                 }
-                Row(Modifier.fillMaxWidth().weight(1f)){
-                    Expression(calculate(expression).toString())
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)){
+                    //Expresión introducida
+                    Expression(35, listToString(parse(expression))) //Expresión introducida
+                }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)){
+                    //Resultado
+                    Expression(50,  calculate(expression).toString()) //Resultado expresión
                 }
             }
         }
@@ -92,7 +116,37 @@ fun mainScreen(){
                 .fillMaxWidth()
                 .weight(1f)
                 .background(Color.Black)
-        ){}
+        ){
+            Column(Modifier
+                .fillMaxSize()){
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)){
+                    Box(modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)){
+                        OperationButton("(", { expression += "(" })
+                    }
+                    Box(modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)){
+                        OperationButton(")", { expression += ")" })
+                    }
+                }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)){
+                    Box(modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)){
+                        OperationButton("CE", { expression = "" })
+                    }
+                }
+            }
+
+        }
 
         Box(
             modifier = Modifier
@@ -138,52 +192,52 @@ fun mainScreen(){
                 Column(
                     Modifier
                         .fillMaxHeight()
-                        .weight(1f)){
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)){
-                        OperationButton("8", { expression += "8" })
+                        .weight(2f)){
+                    Row(Modifier.fillMaxWidth().weight(1f)){
+                        Box(modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)){
+                            OperationButton("8", { expression += "8" })
+                        }
+                        Box(modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)){
+                            OperationButton("9", { expression += "9" })
+                        }
                     }
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)){
-                        OperationButton("5", { expression += "5" })
+                    Row(Modifier.fillMaxWidth().weight(1f)){
+                        Box(modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)){
+                            OperationButton("5", { expression += "5" })
+                        }
+                        Box(modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)){
+                            OperationButton("6", { expression += "6" })
+                        }
                     }
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)){
-                        OperationButton("2", { expression += "2" })
+                    Row(Modifier.fillMaxWidth().weight(1f)){
+                        Box(modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)){
+                            OperationButton("2", { expression += "2" })
+                        }
+                        Box(modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)){
+                            OperationButton("3", { expression += "3" })
+                        }
                     }
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)) {
-                        OperationButton(".", { expression += "." })
-                    }
-                }
-
-                Column(
-                    Modifier
-                        .fillMaxHeight()
-                        .weight(1f)){
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)){
-                        OperationButton("9", { expression += "9" })
-                    }
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)){
-                        OperationButton("6", { expression += "6" })
-                    }
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)){
-                        OperationButton("3", { expression += "3" })
-                    }
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)) {
-                        OperationButton("=", { expression += "=" })
+                    Row(Modifier.fillMaxWidth().weight(1f)){
+                        Box(modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)){
+                            OperationButton("=", {
+                                lastExpression = expression
+                                expression = ""
+                            })
+                        }
                     }
                 }
 
@@ -209,7 +263,7 @@ fun mainScreen(){
                     Box(modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)) {
-                        OperationButton("%", { expression += "%" })
+                        OperationButton("x", { expression += "*" })
                     }
                 }
 
@@ -220,70 +274,12 @@ fun mainScreen(){
     }
 }
 
-fun calculate(expression: String): Double {
-    val postfixExpression = infixToPostfix(expression)
-    return evaluatePostfix(postfixExpression)
-}
-
-private fun infixToPostfix(expression: String): String {
-    val output = StringBuilder()
-    val operators = Stack<Char>()
-    val precedence = hashMapOf('+' to 1, '-' to 1, '*' to 2, '/' to 2)
-
-    for (char in expression) {
-        if (char.isDigit() || char == '.') {
-            output.append(char)
-        } else if (char == '(') {
-            operators.push(char)
-        } else if (char == ')') {
-            while (!operators.isEmpty() && operators.peek() != '(') {
-                output.append(operators.pop())
-            }
-            operators.pop()
-        } else {
-            while (!operators.isEmpty() && precedence.getOrDefault(operators.peek(), 0) >= precedence.getOrDefault(char, 0)) {
-                output.append(operators.pop())
-            }
-            operators.push(char)
-        }
-    }
-
-    while (!operators.isEmpty()) {
-        output.append(operators.pop())
-    }
-
-    return output.toString()
-}
-
-private fun evaluatePostfix(expression: String): Double {
-    val stack = Stack<Double>()
-
-    for (char in expression) {
-        if (char.isDigit() || char == '.') {
-            stack.push(char.toString().toDouble())
-        } else {
-            val operand2 = stack.pop()
-            val operand1 = stack.pop()
-            val result = when (char) {
-                '+' -> operand1 + operand2
-                '-' -> operand1 - operand2
-                '*' -> operand1 * operand2
-                '/' -> operand1 / operand2
-                else -> throw IllegalArgumentException("Invalid operator")
-            }
-            stack.push(result)
-        }
-    }
-
-    return stack.pop()
-}
-
 @Composable
-fun Expression(expr: String){
+fun Expression(fontSize: Int, expr: String){
     Text(
         text = expr, Modifier.fillMaxWidth(),
         style = TextStyle(
-                fontSize = 40.sp,
+                fontSize = fontSize.sp,
         shadow = Shadow(
             color = Color.White
         )
@@ -292,17 +288,177 @@ fun Expression(expr: String){
     )
 }
 
+private fun calculate(expression: String): Double{
+    return calcPostfix(infixToPostfix(parse(expression)))
+}
+
+private fun listToString(list: MutableList<Token>): String{
+    var str = ""
+    for (i in list){
+        if(i.type == 'n'){
+            str += i.value.toInt()
+        }else{
+            str += i.type
+        }
+    }
+    return str
+}
+
+//Parseamos el string introducido para meter en una lista los números y las operaciones, además
+//de ignorar los operadores duplicados.
+fun parse(expression: String): MutableList<Token>{
+    val terms = mutableListOf<Token>()
+    val length = expression.length
+    var i = 0
+    while(i < length){
+        val char = expression.get(i).toChar()
+        if(char.isDigit()){
+            var num = 0
+            //Si delante del número se cierra un paréntesis, añadimos un signo de multiplicación
+            if(i > 1){
+                if((expression.get(i-1) == ')')){
+                    terms.add(Token('*', 0.0))
+                }
+            }
+            //Parseamos el número aun Int //todo: support for decimal numbers
+            for(j in i..length-1){
+                if(expression.get(j).isDigit()){
+                    num = num*10 + expression.get(j).digitToInt()
+                    i++
+                }else{
+                    break;
+                }
+            }
+            val token = Token('n', num.toDouble())
+            terms.add(token)
+        }else{
+            if(isOp(char)){
+                for(j in i..length-2){
+                    var nextChar = expression.get(j + 1).toChar()
+                    if(!isOp(nextChar)){
+                        val token = Token(expression.get(i).toChar(), 0.0)
+                        terms.add(token)
+                        break;
+                    } else{
+                        i++
+                    }
+                }
+            }else {
+                if(char == '(') {
+                    if(isOp(expression.get(i-1))){
+                        terms.add(Token(char, 0.0))
+                    }
+                }else if(char == ')'){
+                    terms.add(Token(char, 0.0))
+                }
+            }
+            i++
+        }
+    }
+    return terms
+}
+
+//Evalua una expresión en postfix a un doble
+fun calcPostfix(list: List<Token>): Double{
+
+    var stack: Stack<Token> = Stack<Token>()
+
+    for(token in list){
+        Log.i("myTag", "Stack" + stack.toString())
+        if(token.type == 'n'){
+            stack.push(token)
+        }else{
+            var n1: Double
+            var n2: Double
+            //el stack puede estar vacio si hay un parátensis sin cerrar
+            //todo: quitar los ifs estos
+            if(stack.isEmpty()){
+                n1 = 0.0
+            }else{
+                n1 = stack.pop().value
+            }
+            if(stack.isEmpty()){
+                n2 = 0.0
+            }else{
+                n2 = stack.pop().value
+            }
+
+            if(token.type == '+'){
+                stack.push(Token('n', n2+n1))
+            }else if(token.type == '-'){
+                stack.push(Token('n', n2-n1))
+            }else if(token.type == '/'){
+                stack.push(Token('n', n2/n1)) //C O N T R O L A R N 2 = 0
+            }else if(token.type == '*'){
+                stack.push(Token('n', n2*n1))
+            }
+        }
+    }
+    if(stack.isEmpty()) return 0.0
+    return stack.pop().value //retornamos el item 0 puesto que si la expresión termina en operador, devolverá el operador
+}
+
+//Utilizando el algoritmo de Shunting yard, pasamos la expresión introducida a Postfixs
+fun infixToPostfix(list: MutableList<Token>): List<Token>{
+    var queue: Queue<Token> = LinkedList<Token>()
+    var stack: Stack<Token> = Stack<Token>()
+
+    for(token in list){
+        when(token.type){
+            'n' -> queue.add(token)
+            '(' -> stack.push(token)
+            ')' -> {
+                while(!stack.isEmpty() && stack.peek().type != '(') { // pop and enqueue all tokens until an opening parenthesis or an empty stack
+                    queue.add(stack.pop())
+                }
+                if(!stack.isEmpty() && stack.peek().type == '(') { // pop and discard the opening parenthesis
+                    stack.pop()
+                }
+            }
+            else -> {
+                while(!stack.isEmpty() && getPrecedence(stack.peek()) >= getPrecedence(token)) { // pop and enqueue all tokens with higher or equal precedence
+                    queue.add(stack.pop())
+                }
+                stack.push(token) // push the current token to the stack
+            }
+        }
+
+    }
+    //Volcamos todo el stack en la pila
+    while(!stack.isEmpty()) {
+        queue.add(stack.pop())
+    }
+    Log.i("myTag", "Queue" + queue.toString())
+    return queue.toList()
+}
+
+private fun isOp(operator: Char): Boolean{
+    if((operator == '+') or (operator == '-') or (operator == '/') or (operator == '*')) return true
+    return false
+}
+
+private fun isOp(token: Token): Boolean{
+    if((token.type == '+') or (token.type == '-') or (token.type == '/') or (token.type == '*')) return true
+    return false
+}
+
+private fun getPrecedence(token: Token): Int{
+    if((token.type == '+') or (token.type == '-')) return 1
+    if((token.type == '*') or (token.type == '/')) return 2
+    return 0
+}
+
 @Composable
-fun OperationButton(operacion: String, onKeyPresseded: () -> Unit) {
+fun OperationButton(operation: String, onKeyPressed: () -> Unit) {
     OutlinedButton(
         modifier = Modifier
             .fillMaxSize(),
         enabled = true,
-        onClick = { onKeyPresseded() },
+        onClick = { onKeyPressed() },
         border = BorderStroke(1.dp, Color.White),
-        shape = RoundedCornerShape(50))
+        shape = RoundedCornerShape(10))
     {
-        Text(text = operacion,
+        Text(text = operation,
             style = TextStyle(
                 color = Color.White,
                 fontSize = 25.sp)
